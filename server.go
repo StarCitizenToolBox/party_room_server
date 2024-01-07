@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"google.golang.org/grpc"
 	"net"
+	"party_room_server/db"
 	"party_room_server/protos"
 	"party_room_server/service"
 )
 
 func main() {
+	err := db.Connect()
+	if err != nil {
+		panic(err)
+	}
 	StartGRPCService()
 }
 

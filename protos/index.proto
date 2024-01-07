@@ -4,9 +4,22 @@ option go_package = "../protos";
 service IndexService {
   rpc PingServer (PingData) returns (PingData) {}
   rpc GetRoomTypes (Empty) returns (RoomTypesData){}
+  rpc CreateRoom (RoomData) returns (RoomData){}
+  rpc GetRoomList(RoomListPageReqData) returns (RoomListData) {}
 }
 
 message Empty {}
+
+message BaseRespData {
+  int32  code = 1;
+  string message = 2;
+}
+
+message BasePageRespData {
+  int32  code = 1;
+  string message = 2;
+  int32  nextPageNum = 3;
+}
 
 message PingData {
   string data = 1;
@@ -47,4 +60,27 @@ message RoomType {
 message RoomSubtype {
   string id = 1;
   string name = 2;
+}
+
+message RoomData {
+  string id = 1;
+  string roomTypeID = 2;
+  repeated string roomSubTypeIds = 3;
+  string owner = 4;
+  int32 maxPlayer = 5;
+  int64 createTime = 6;
+  int32 curPlayer = 7;
+  int32 status = 8;
+}
+
+message RoomListPageReqData {
+  string typeID = 1;
+  string subTypeID = 2;
+  RoomStatus status = 3;
+  RoomSortType sort = 4;
+}
+
+message RoomListData {
+  BasePageRespData pageData = 1;
+  repeated RoomData rooms = 2;
 }

@@ -21,6 +21,8 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	IndexService_PingServer_FullMethodName   = "/IndexService/PingServer"
 	IndexService_GetRoomTypes_FullMethodName = "/IndexService/GetRoomTypes"
+	IndexService_CreateRoom_FullMethodName   = "/IndexService/CreateRoom"
+	IndexService_GetRoomList_FullMethodName  = "/IndexService/GetRoomList"
 )
 
 // IndexServiceClient is the client API for IndexService service.
@@ -29,6 +31,8 @@ const (
 type IndexServiceClient interface {
 	PingServer(ctx context.Context, in *PingData, opts ...grpc.CallOption) (*PingData, error)
 	GetRoomTypes(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RoomTypesData, error)
+	CreateRoom(ctx context.Context, in *RoomData, opts ...grpc.CallOption) (*RoomData, error)
+	GetRoomList(ctx context.Context, in *RoomListPageReqData, opts ...grpc.CallOption) (*RoomListData, error)
 }
 
 type indexServiceClient struct {
@@ -57,12 +61,32 @@ func (c *indexServiceClient) GetRoomTypes(ctx context.Context, in *Empty, opts .
 	return out, nil
 }
 
+func (c *indexServiceClient) CreateRoom(ctx context.Context, in *RoomData, opts ...grpc.CallOption) (*RoomData, error) {
+	out := new(RoomData)
+	err := c.cc.Invoke(ctx, IndexService_CreateRoom_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *indexServiceClient) GetRoomList(ctx context.Context, in *RoomListPageReqData, opts ...grpc.CallOption) (*RoomListData, error) {
+	out := new(RoomListData)
+	err := c.cc.Invoke(ctx, IndexService_GetRoomList_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IndexServiceServer is the server API for IndexService service.
 // All implementations must embed UnimplementedIndexServiceServer
 // for forward compatibility
 type IndexServiceServer interface {
 	PingServer(context.Context, *PingData) (*PingData, error)
 	GetRoomTypes(context.Context, *Empty) (*RoomTypesData, error)
+	CreateRoom(context.Context, *RoomData) (*RoomData, error)
+	GetRoomList(context.Context, *RoomListPageReqData) (*RoomListData, error)
 	mustEmbedUnimplementedIndexServiceServer()
 }
 
@@ -75,6 +99,12 @@ func (UnimplementedIndexServiceServer) PingServer(context.Context, *PingData) (*
 }
 func (UnimplementedIndexServiceServer) GetRoomTypes(context.Context, *Empty) (*RoomTypesData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRoomTypes not implemented")
+}
+func (UnimplementedIndexServiceServer) CreateRoom(context.Context, *RoomData) (*RoomData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateRoom not implemented")
+}
+func (UnimplementedIndexServiceServer) GetRoomList(context.Context, *RoomListPageReqData) (*RoomListData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRoomList not implemented")
 }
 func (UnimplementedIndexServiceServer) mustEmbedUnimplementedIndexServiceServer() {}
 
@@ -125,6 +155,42 @@ func _IndexService_GetRoomTypes_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _IndexService_CreateRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RoomData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IndexServiceServer).CreateRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IndexService_CreateRoom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IndexServiceServer).CreateRoom(ctx, req.(*RoomData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _IndexService_GetRoomList_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RoomListPageReqData)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IndexServiceServer).GetRoomList(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IndexService_GetRoomList_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IndexServiceServer).GetRoomList(ctx, req.(*RoomListPageReqData))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // IndexService_ServiceDesc is the grpc.ServiceDesc for IndexService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -139,6 +205,14 @@ var IndexService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRoomTypes",
 			Handler:    _IndexService_GetRoomTypes_Handler,
+		},
+		{
+			MethodName: "CreateRoom",
+			Handler:    _IndexService_CreateRoom_Handler,
+		},
+		{
+			MethodName: "GetRoomList",
+			Handler:    _IndexService_GetRoomList_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

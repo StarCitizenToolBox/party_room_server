@@ -64,7 +64,7 @@ var RoomTypesData = []*protos.RoomType{
 		Name: "竞技场指挥官",
 		Desc: "以竞技场指挥官为主的玩法",
 		SubTypes: []*protos.RoomSubtype{
-			{Id: "ac_dog_fight", Name: "自由飞狗斗玩法"},
+			{Id: "ac_dog_fight", Name: "自由飞"},
 			{Id: "ac_pirate", Name: "海盗潮"},
 			{Id: "ac_van", Name: "弯度潮"},
 		},
@@ -73,5 +73,10 @@ var RoomTypesData = []*protos.RoomType{
 		Id:   "global",
 		Name: "随便玩",
 		Desc: "随便玩点啥，无固定分类",
+	},
+	{
+		Id:   "newbie",
+		Name: "新手频道",
+		Desc: "萌新！快到碗里来！",
 	},
 }

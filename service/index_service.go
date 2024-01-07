@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"party_room_server/build_conf"
+	"party_room_server/db"
 	"party_room_server/protos"
 )
 
@@ -25,4 +26,28 @@ func (IndexServiceImpl) GetRoomTypes(_ context.Context, _ *protos.Empty) (*proto
 	return &protos.RoomTypesData{
 		RoomTypes: build_conf.RoomTypesData,
 	}, nil
+}
+
+func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*protos.RoomData, error) {
+	var room = db.RoomsTable{
+		RoomTypeID:     req.RoomTypeID,
+		RoomSubTypeIds: req.RoomSubTypeIds,
+		Owner:          req.Owner,
+		MaxPlayer:      req.MaxPlayer,
+		Status:         protos.RoomStatus_Open,
+	}
+	db.DB.Create(&room).WithContext(ctx)
+	return &protos.RoomData{
+		Id:             room.ID.String(),
+		RoomTypeID:     room.RoomTypeID,
+		RoomSubTypeIds: room.RoomSubTypeIds,
+		Owner:          room.Owner,
+		MaxPlayer:      room.MaxPlayer,
+		Status:         req.Status,
+		CurPlayer:      0,
+	}, nil
+}
+
+func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPageReqData) (*protos.RoomListData, error) {
+	return nil, nil
 }
