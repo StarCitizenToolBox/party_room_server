@@ -18,7 +18,7 @@ func StartGRPCService() {
 		panic("failed to listen port :" + err.Error())
 	}
 	grpcServer := grpc.NewServer()
-	protos.RegisterPingServiceServer(grpcServer, &service.IndexServiceImpl{})
+	protos.RegisterIndexServiceServer(grpcServer, &service.IndexServiceImpl{})
 	fmt.Println("StartGRPCService ....")
 	err = grpcServer.Serve(lis)
 	if err != nil {
