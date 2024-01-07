@@ -8,7 +8,7 @@ import (
 )
 
 type IndexServiceImpl struct {
-	protos.UnimplementedPingServiceServer
+	protos.UnimplementedIndexServiceServer
 }
 
 func (IndexServiceImpl) PingServer(_ context.Context, data *protos.PingData) (*protos.PingData, error) {

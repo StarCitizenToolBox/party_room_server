@@ -19,89 +19,89 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	PingService_PingServer_FullMethodName = "/PingService/PingServer"
+	IndexService_PingServer_FullMethodName = "/IndexService/PingServer"
 )
 
-// PingServiceClient is the client API for PingService service.
+// IndexServiceClient is the client API for IndexService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type PingServiceClient interface {
+type IndexServiceClient interface {
 	PingServer(ctx context.Context, in *PingData, opts ...grpc.CallOption) (*PingData, error)
 }
 
-type pingServiceClient struct {
+type indexServiceClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewPingServiceClient(cc grpc.ClientConnInterface) PingServiceClient {
-	return &pingServiceClient{cc}
+func NewIndexServiceClient(cc grpc.ClientConnInterface) IndexServiceClient {
+	return &indexServiceClient{cc}
 }
 
-func (c *pingServiceClient) PingServer(ctx context.Context, in *PingData, opts ...grpc.CallOption) (*PingData, error) {
+func (c *indexServiceClient) PingServer(ctx context.Context, in *PingData, opts ...grpc.CallOption) (*PingData, error) {
 	out := new(PingData)
-	err := c.cc.Invoke(ctx, PingService_PingServer_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, IndexService_PingServer_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// PingServiceServer is the server API for PingService service.
-// All implementations must embed UnimplementedPingServiceServer
+// IndexServiceServer is the server API for IndexService service.
+// All implementations must embed UnimplementedIndexServiceServer
 // for forward compatibility
-type PingServiceServer interface {
+type IndexServiceServer interface {
 	PingServer(context.Context, *PingData) (*PingData, error)
-	mustEmbedUnimplementedPingServiceServer()
+	mustEmbedUnimplementedIndexServiceServer()
 }
 
-// UnimplementedPingServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedPingServiceServer struct {
+// UnimplementedIndexServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedIndexServiceServer struct {
 }
 
-func (UnimplementedPingServiceServer) PingServer(context.Context, *PingData) (*PingData, error) {
+func (UnimplementedIndexServiceServer) PingServer(context.Context, *PingData) (*PingData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PingServer not implemented")
 }
-func (UnimplementedPingServiceServer) mustEmbedUnimplementedPingServiceServer() {}
+func (UnimplementedIndexServiceServer) mustEmbedUnimplementedIndexServiceServer() {}
 
-// UnsafePingServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to PingServiceServer will
+// UnsafeIndexServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to IndexServiceServer will
 // result in compilation errors.
-type UnsafePingServiceServer interface {
-	mustEmbedUnimplementedPingServiceServer()
+type UnsafeIndexServiceServer interface {
+	mustEmbedUnimplementedIndexServiceServer()
 }
 
-func RegisterPingServiceServer(s grpc.ServiceRegistrar, srv PingServiceServer) {
-	s.RegisterService(&PingService_ServiceDesc, srv)
+func RegisterIndexServiceServer(s grpc.ServiceRegistrar, srv IndexServiceServer) {
+	s.RegisterService(&IndexService_ServiceDesc, srv)
 }
 
-func _PingService_PingServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _IndexService_PingServer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(PingData)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(PingServiceServer).PingServer(ctx, in)
+		return srv.(IndexServiceServer).PingServer(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: PingService_PingServer_FullMethodName,
+		FullMethod: IndexService_PingServer_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(PingServiceServer).PingServer(ctx, req.(*PingData))
+		return srv.(IndexServiceServer).PingServer(ctx, req.(*PingData))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// PingService_ServiceDesc is the grpc.ServiceDesc for PingService service.
+// IndexService_ServiceDesc is the grpc.ServiceDesc for IndexService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var PingService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "PingService",
-	HandlerType: (*PingServiceServer)(nil),
+var IndexService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "IndexService",
+	HandlerType: (*IndexServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "PingServer",
-			Handler:    _PingService_PingServer_Handler,
+			Handler:    _IndexService_PingServer_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
