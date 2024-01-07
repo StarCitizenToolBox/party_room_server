@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	IndexService_PingServer_FullMethodName = "/IndexService/PingServer"
+	IndexService_PingServer_FullMethodName   = "/IndexService/PingServer"
+	IndexService_GetRoomTypes_FullMethodName = "/IndexService/GetRoomTypes"
 )
 
 // IndexServiceClient is the client API for IndexService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type IndexServiceClient interface {
 	PingServer(ctx context.Context, in *PingData, opts ...grpc.CallOption) (*PingData, error)
+	GetRoomTypes(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RoomTypesData, error)
 }
 
 type indexServiceClient struct {
@@ -46,11 +48,21 @@ func (c *indexServiceClient) PingServer(ctx context.Context, in *PingData, opts 
 	return out, nil
 }
 
+func (c *indexServiceClient) GetRoomTypes(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RoomTypesData, error) {
+	out := new(RoomTypesData)
+	err := c.cc.Invoke(ctx, IndexService_GetRoomTypes_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IndexServiceServer is the server API for IndexService service.
 // All implementations must embed UnimplementedIndexServiceServer
 // for forward compatibility
 type IndexServiceServer interface {
 	PingServer(context.Context, *PingData) (*PingData, error)
+	GetRoomTypes(context.Context, *Empty) (*RoomTypesData, error)
 	mustEmbedUnimplementedIndexServiceServer()
 }
 
@@ -60,6 +72,9 @@ type UnimplementedIndexServiceServer struct {
 
 func (UnimplementedIndexServiceServer) PingServer(context.Context, *PingData) (*PingData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PingServer not implemented")
+}
+func (UnimplementedIndexServiceServer) GetRoomTypes(context.Context, *Empty) (*RoomTypesData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetRoomTypes not implemented")
 }
 func (UnimplementedIndexServiceServer) mustEmbedUnimplementedIndexServiceServer() {}
 
@@ -92,6 +107,24 @@ func _IndexService_PingServer_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _IndexService_GetRoomTypes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IndexServiceServer).GetRoomTypes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IndexService_GetRoomTypes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IndexServiceServer).GetRoomTypes(ctx, req.(*Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // IndexService_ServiceDesc is the grpc.ServiceDesc for IndexService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -102,6 +135,10 @@ var IndexService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PingServer",
 			Handler:    _IndexService_PingServer_Handler,
+		},
+		{
+			MethodName: "GetRoomTypes",
+			Handler:    _IndexService_GetRoomTypes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

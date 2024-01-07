@@ -3,10 +3,48 @@ option go_package = "../protos";
 
 service IndexService {
   rpc PingServer (PingData) returns (PingData) {}
+  rpc GetRoomTypes (Empty) returns (RoomTypesData){}
 }
+
+message Empty {}
 
 message PingData {
   string data = 1;
   sint64 clientVersion = 2;
   sint64 serverVersion = 3;
+}
+
+enum RoomStatus {
+  All = 0;
+  Open = 1;
+  Private = 2;
+  Full = 3;
+  Closed = 4;
+  WillOffline = 5;
+  Offline = 6;
+}
+
+enum RoomSortType {
+  Default = 0;
+  MostPlayerNumber = 1;
+  MinimumPlayerNumber = 2;
+  RecentlyCreated = 3;
+  OldestCreated = 4;
+}
+
+message RoomTypesData {
+  repeated RoomType roomTypes = 1;
+}
+
+message RoomType {
+  string id = 1;
+  string name = 2;
+  string icon = 3;
+  string desc = 4;
+  repeated RoomSubtype subTypes = 5;
+}
+
+message RoomSubtype {
+  string id = 1;
+  string name = 2;
 }

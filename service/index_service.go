@@ -20,3 +20,9 @@ func (IndexServiceImpl) PingServer(_ context.Context, data *protos.PingData) (*p
 	}
 	return nil, errors.New("bad Request")
 }
+
+func (IndexServiceImpl) GetRoomTypes(_ context.Context, _ *protos.Empty) (*protos.RoomTypesData, error) {
+	return &protos.RoomTypesData{
+		RoomTypes: build_conf.RoomTypesData,
+	}, nil
+}
