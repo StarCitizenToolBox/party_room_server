@@ -1,0 +1,12 @@
+syntax = "proto3";
+option go_package = "../protos";
+
+service PingService {
+  rpc PingServer (PingData) returns (PingData) {}
+}
+
+message PingData {
+  string data = 1;
+  sint64 clientVersion = 2;
+  sint64 serverVersion = 3;
+}
