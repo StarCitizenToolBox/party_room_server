@@ -35,19 +35,18 @@ func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*
 		RoomSubTypeIds: req.RoomSubTypeIds,
 		Owner:          req.Owner,
 		MaxPlayer:      req.MaxPlayer,
+		CurPlayer:      0,
 		DeviceUUID:     req.DeviceUUID,
 		Status:         protos.RoomStatus_Open,
+		Announcement:   req.Announcement,
 	}
 	db.DB.WithContext(ctx).Create(&room)
-	return _roomDataToRoomResultData(&room), nil
+	return _roomDataToRoomResultData(&room, true), nil
 }
 
 func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPageReqData) (*protos.RoomListData, error) {
 	var rooms []*db.RoomsTable
 	q := db.DB.WithContext(ctx).Offset(int(req.PageNum)).Limit(50)
-	if req.PageNum == 0 {
-		req.PageNum = 1
-	}
 	if req.Status != protos.RoomStatus_All {
 		q = q.Where("status = ?", req.Status)
 	}
@@ -64,7 +63,7 @@ func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPag
 	}
 	var roomsResult []*protos.RoomData
 	for _, room := range rooms {
-		roomsResult = append(roomsResult, _roomDataToRoomResultData(room))
+		roomsResult = append(roomsResult, _roomDataToRoomResultData(room, false))
 	}
 
 	return &protos.RoomListData{
@@ -78,14 +77,20 @@ func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPag
 	}, nil
 }
 
-func _roomDataToRoomResultData(room *db.RoomsTable) *protos.RoomData {
-	return &protos.RoomData{
+func _roomDataToRoomResultData(room *db.RoomsTable, fullInfo bool) *protos.RoomData {
+	r := &protos.RoomData{
 		Id:             room.ID.String(),
 		RoomTypeID:     room.RoomTypeID,
 		RoomSubTypeIds: room.RoomSubTypeIds,
-		Owner:          room.Owner,
+		Owner:          "-",
 		MaxPlayer:      room.MaxPlayer,
 		Status:         room.Status,
-		CurPlayer:      0, // TODO 获取房间实际人数
+		CurPlayer:      room.CurPlayer,
+		Announcement:   "-",
 	}
+	if fullInfo {
+		r.Owner = room.Owner
+		r.Announcement = room.Announcement
+	}
+	return r
 }

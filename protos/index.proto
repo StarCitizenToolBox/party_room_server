@@ -74,6 +74,7 @@ message RoomData {
   int32 curPlayer = 7;
   RoomStatus status = 8;
   string deviceUUID = 9;
+  string announcement = 10;
 }
 
 message RoomListPageReqData {
