@@ -55,7 +55,7 @@ func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPag
 		q = q.Where("room_type_id = ?", req.TypeID)
 	}
 	if req.SubTypeID != "" {
-		q = q.Where("ANY(room_sub_type_ids) = ?", req.SubTypeID)
+		q = q.Where("? = ANY(room_sub_type_ids)", req.SubTypeID)
 	}
 	// TODO 排序
 	r := q.Find(&rooms)
