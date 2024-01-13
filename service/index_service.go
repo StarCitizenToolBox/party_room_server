@@ -6,6 +6,7 @@ import (
 	"party_room_server/build_conf"
 	"party_room_server/db"
 	"party_room_server/protos"
+	"party_room_server/starcitizen_api"
 	"strings"
 )
 
@@ -31,6 +32,12 @@ func (IndexServiceImpl) GetRoomTypes(_ context.Context, _ *protos.Empty) (*proto
 
 func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*protos.RoomData, error) {
 	// TODO 格式检查 子类型约束检查
+
+	// getUserData
+	userData, err := starcitizen_api.GetUserData(req.Owner)
+	if err != nil {
+		return nil, err
+	}
 	var room = db.RoomsTable{
 		RoomTypeID:     req.RoomTypeID,
 		RoomSubTypeIds: req.RoomSubTypeIds,
@@ -40,6 +47,7 @@ func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*
 		DeviceUUID:     req.DeviceUUID,
 		Status:         protos.RoomStatus_Open,
 		Announcement:   req.Announcement,
+		Avatar:         userData.Data.Profile.Image,
 	}
 	db.DB.WithContext(ctx).Create(&room)
 	return _roomDataToRoomResultData(&room, true), nil
@@ -87,6 +95,7 @@ func _roomDataToRoomResultData(room *db.RoomsTable, fullInfo bool) *protos.RoomD
 		Status:         room.Status,
 		CurPlayer:      room.CurPlayer,
 		Announcement:   "-",
+		Avatar:         room.Avatar,
 	}
 	if fullInfo {
 		r.Owner = room.Owner
