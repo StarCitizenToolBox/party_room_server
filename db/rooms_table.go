@@ -15,4 +15,5 @@ type RoomsTable struct {
 	Status         protos.RoomStatus `gorm:"index" json:"status"`                        // 房间状态
 	DeviceUUID     string            `gorm:"index" json:"id"`
 	Announcement   string            `json:"announcement"`
+	Avatar         string            `json:"avatar"`
 }

@@ -75,6 +75,7 @@ message RoomData {
   RoomStatus status = 8;
   string deviceUUID = 9;
   string announcement = 10;
+  string avatar = 11;
 }
 
 message RoomListPageReqData {

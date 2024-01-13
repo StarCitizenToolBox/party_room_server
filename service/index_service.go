@@ -6,6 +6,7 @@ import (
 	"party_room_server/build_conf"
 	"party_room_server/db"
 	"party_room_server/protos"
+	"strings"
 )
 
 type IndexServiceImpl struct {
@@ -82,7 +83,6 @@ func _roomDataToRoomResultData(room *db.RoomsTable, fullInfo bool) *protos.RoomD
 		Id:             room.ID.String(),
 		RoomTypeID:     room.RoomTypeID,
 		RoomSubTypeIds: room.RoomSubTypeIds,
-		Owner:          "-",
 		MaxPlayer:      room.MaxPlayer,
 		Status:         room.Status,
 		CurPlayer:      room.CurPlayer,
@@ -91,6 +91,20 @@ func _roomDataToRoomResultData(room *db.RoomsTable, fullInfo bool) *protos.RoomD
 	if fullInfo {
 		r.Owner = room.Owner
 		r.Announcement = room.Announcement
+	} else {
+		r.Owner = _maskMiddleChars(room.Owner)
 	}
 	return r
+}
+
+func _maskMiddleChars(s string) string {
+	length := len(s)
+	if length <= 2 {
+		return "***"
+	}
+	firstChar := string(s[0])
+	lastChar := string(s[length-1])
+	middleChars := strings.Repeat("*", length-2)
+
+	return firstChar + middleChars + lastChar
 }
