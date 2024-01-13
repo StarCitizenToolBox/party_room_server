@@ -12,4 +12,5 @@ type RoomsTable struct {
 	Owner          string            `gorm:"index" json:"owner"`                         //房主
 	MaxPlayer      int32             `gorm:"index" json:"max_player"`                    // 最大玩家数量
 	Status         protos.RoomStatus `gorm:"index" json:"status"`                        // 房间状态
+	DeviceUUID     string            `gorm:"index" json:"ID"`
 }
