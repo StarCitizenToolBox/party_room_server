@@ -25,7 +25,8 @@ type RoomUser struct {
 	BaseTable
 	RoomID     uuid.UUID `gorm:"type:uuid;index;uniqueIndex:idx_player"` // 房间ID
 	Room       *Room
-	PlayerName string `gorm:"index;uniqueIndex:idx_player"` //玩家名称
-	Avatar     string // 玩家头像
-	DeviceUUID string `gorm:"index"` // 玩家的 Device UUID
+	PlayerName string                `gorm:"index;uniqueIndex:idx_player"` //玩家名称
+	Avatar     string                // 玩家头像
+	DeviceUUID string                `gorm:"index"` // 玩家的 Device UUID
+	Status     protos.RoomUserStatus `gorm:"index"` // 玩家状态
 }

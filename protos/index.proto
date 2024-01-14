@@ -7,6 +7,7 @@ service IndexService {
   rpc CreateRoom (RoomData) returns (RoomData){}
   rpc GetRoomList(RoomListPageReqData) returns (RoomListData) {}
   rpc TouchUser(PreUser) returns (RoomData) {}
+  rpc JoinRoom(PreUser) returns (stream RoomUpdateMessage){}
 }
 
 message Empty {}
@@ -96,4 +97,29 @@ message RoomListData {
 message PreUser {
   string userName = 1;
   string deviceUUID = 2;
+  string roomID = 3;
+}
+
+enum RoomUserStatus {
+  RoomUserStatusJoin = 0; // 用户已加入房间
+  RoomUserStatusLostOffline = 1; // 用户即将离线
+  RoomUserStatusLeave = 2; // 用户已离开
+}
+
+enum RoomUpdateType {
+  RoomUpdateData = 0; // 普通数据更新
+  RoomClose = 1; // 房间被服务器关闭
+}
+
+message RoomUserData {
+  string  id = 1;
+  string  playerName = 2;
+  string  Avatar = 3;
+  RoomUserStatus status = 4;
+}
+
+message RoomUpdateMessage {
+  RoomData roomData = 1;
+  repeated RoomUserData usersData = 2;
+  RoomUpdateType roomUpdateType = 3;
 }

@@ -64,10 +64,7 @@ func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*
 	if err := db.DB.WithContext(ctx).Create(&room).Error; err != nil {
 		return nil, err
 	}
-	// 将房主加入房间
-	if err = _joinRoom(ctx, room.ID.String(), req.Owner, req.DeviceUUID); err != nil {
-		return nil, err
-	}
+	RoomServer.CreateRoom(room.ID)
 	return _roomDataToRoomResultData(&room, true), nil
 }
 
@@ -115,45 +112,66 @@ func (IndexServiceImpl) TouchUser(ctx context.Context, req *protos.PreUser) (*pr
 	return _roomDataToRoomResultData(room, false), err
 }
 
-func _joinRoom(ctx context.Context, roomID string, playerName string, deviceUUID string) error {
+func (IndexServiceImpl) JoinRoom(preUser *protos.PreUser, stream protos.IndexService_JoinRoomServer) error {
+	user, err := _joinRoom(stream.Context(), preUser.RoomID, preUser.UserName, preUser.DeviceUUID)
+	if err != nil {
+		return nil
+	}
+	ctx, cancel := context.WithCancel(stream.Context())
+	// 将用户 stream 加入map
+	if err := _onUserJoinRoom(user, stream, cancel); err != nil {
+		return err
+	}
+	select {
+	case <-ctx.Done():
+		// user offline
+		_onUserOfflineRoom(preUser.RoomID, preUser.UserName, preUser.DeviceUUID)
+		return nil
+	}
+}
+
+func _joinRoom(ctx context.Context, roomID string, playerName string, deviceUUID string) (*db.RoomUser, error) {
 	roomUUID, err := uuid.Parse(roomID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	room, err := _touchUser(ctx, playerName, deviceUUID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if room != nil && room.ID.String() != roomID {
-		return errors.New("您已加入了其他房间，请退出后再加入新的房间。")
+		return nil, errors.New("您已加入了其他房间，请退出后再加入新的房间。")
 	}
 	var targetRoom db.Room
 	if err := db.DB.WithContext(ctx).Preload("RoomUsers").Where("id = ?", roomID).Find(&targetRoom).Error; err != nil {
-		return err
+		return nil, err
 	}
 	for _, user := range targetRoom.RoomUsers {
 		if user.PlayerName == playerName {
 			if user.DeviceUUID != deviceUUID {
-				return errors.New("您已在其他设备加入了这个房间。")
+				return nil, errors.New("您已在其他设备加入了这个房间。")
 			}
 			// 用户已加入该房间，跳过资料创建
-			return nil
+			user.Room = &targetRoom
+			return &user, nil
 		}
 	}
 	userData, err := starcitizen_api.GetUserData(playerName)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	newUser := &db.RoomUser{
 		RoomID:     roomUUID,
 		PlayerName: playerName,
 		DeviceUUID: deviceUUID,
 		Avatar:     userData.Data.Profile.Image,
+		Status:     protos.RoomUserStatus_RoomUserStatusJoin,
 	}
 	if err := db.DB.Create(newUser).Error; err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	newUser.Room = &targetRoom
+	return newUser, nil
 }
 
 func _touchUser(ctx context.Context, playerName string, deviceUUID string) (*db.Room, error) {
@@ -187,6 +205,35 @@ func _touchUser(ctx context.Context, playerName string, deviceUUID string) (*db.
 	return user[0].Room, nil
 }
 
+func _getRoomPlayerList(roomID string) ([]db.RoomUser, error) {
+	var players []db.RoomUser
+	if err := db.DB.Find(&players, "room_id = ?", roomID).Error; err != nil {
+		return []db.RoomUser{}, err
+	}
+	return players, nil
+}
+
+func _getRoomPlayerListForGrpc(roomID string) ([]*protos.RoomUserData, error) {
+	roomPlayers, err := _getRoomPlayerList(roomID)
+	if err != nil {
+		return []*protos.RoomUserData{}, err
+	}
+	var players []*protos.RoomUserData
+	for _, player := range roomPlayers {
+		players = append(players, _roomUserToGrpcRoomUserData(&player))
+	}
+	return players, nil
+}
+
+func _setUserStatus(roomID string, playerName string, status protos.RoomUserStatus) (*db.RoomUser, error) {
+	var roomUser db.RoomUser
+	if err := db.DB.Find(&roomUser, "roomID = ? AND player_name = ?", roomID, playerName).Error; err != nil {
+		return nil, err
+	}
+	roomUser.Status = status
+	return &roomUser, db.DB.Updates(&roomUser).Error
+}
+
 func _roomDataToRoomResultData(room *db.Room, fullInfo bool) *protos.RoomData {
 	r := &protos.RoomData{
 		Id:             room.ID.String(),
@@ -207,6 +254,14 @@ func _roomDataToRoomResultData(room *db.Room, fullInfo bool) *protos.RoomData {
 		r.Owner = _maskMiddleChars(room.Owner)
 	}
 	return r
+}
+func _roomUserToGrpcRoomUserData(user *db.RoomUser) *protos.RoomUserData {
+	return &protos.RoomUserData{
+		Id:         user.ID.String(),
+		PlayerName: user.PlayerName,
+		Avatar:     user.Avatar,
+		Status:     user.Status,
+	}
 }
 
 func _maskMiddleChars(s string) string {
