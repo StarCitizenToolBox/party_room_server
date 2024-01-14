@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
 	"party_room_server/build_conf"
 	"party_room_server/db"
 	"party_room_server/protos"
@@ -33,28 +35,44 @@ func (IndexServiceImpl) GetRoomTypes(_ context.Context, _ *protos.Empty) (*proto
 func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*protos.RoomData, error) {
 	// TODO 格式检查 子类型约束检查
 
+	// 用户检查
+	r, err := _touchUser(ctx, req.Owner, req.DeviceUUID)
+	if err != nil {
+		return nil, err
+	}
+	if r != nil {
+		return nil, errors.New("您已 加入/创建 其他房间，请先离开对应房间再创建房间")
+	}
+
 	// getUserData
 	userData, err := starcitizen_api.GetUserData(req.Owner)
 	if err != nil {
 		return nil, err
 	}
-	var room = db.RoomsTable{
+	fmt.Println("[IndexServiceImpl] CreateRoom user Data === ", userData)
+	var room = db.Room{
 		RoomTypeID:     req.RoomTypeID,
 		RoomSubTypeIds: req.RoomSubTypeIds,
 		Owner:          req.Owner,
 		MaxPlayer:      req.MaxPlayer,
-		CurPlayer:      0,
 		DeviceUUID:     req.DeviceUUID,
 		Status:         protos.RoomStatus_Open,
 		Announcement:   req.Announcement,
 		Avatar:         userData.Data.Profile.Image,
 	}
-	db.DB.WithContext(ctx).Create(&room)
+	// 创建房间
+	if err := db.DB.WithContext(ctx).Create(&room).Error; err != nil {
+		return nil, err
+	}
+	// 将房主加入房间
+	if err = _joinRoom(ctx, room.ID.String(), req.Owner, req.DeviceUUID); err != nil {
+		return nil, err
+	}
 	return _roomDataToRoomResultData(&room, true), nil
 }
 
 func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPageReqData) (*protos.RoomListData, error) {
-	var rooms []*db.RoomsTable
+	var rooms []*db.Room
 	q := db.DB.WithContext(ctx).Offset(int(req.PageNum)).Limit(50)
 	if req.Status != protos.RoomStatus_All {
 		q = q.Where("status = ?", req.Status)
@@ -66,7 +84,7 @@ func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPag
 		q = q.Where("? = ANY(room_sub_type_ids)", req.SubTypeID)
 	}
 	// TODO 排序
-	r := q.Find(&rooms)
+	r := q.Preload("RoomUsers").Find(&rooms)
 	if r.Error != nil {
 		return nil, r.Error
 	}
@@ -86,16 +104,101 @@ func (IndexServiceImpl) GetRoomList(ctx context.Context, req *protos.RoomListPag
 	}, nil
 }
 
-func _roomDataToRoomResultData(room *db.RoomsTable, fullInfo bool) *protos.RoomData {
+func (IndexServiceImpl) TouchUser(ctx context.Context, req *protos.PreUser) (*protos.RoomData, error) {
+	room, err := _touchUser(ctx, req.UserName, req.DeviceUUID)
+	if err != nil {
+		return nil, err
+	}
+	if room == nil {
+		return nil, nil
+	}
+	return _roomDataToRoomResultData(room, false), err
+}
+
+func _joinRoom(ctx context.Context, roomID string, playerName string, deviceUUID string) error {
+	roomUUID, err := uuid.Parse(roomID)
+	if err != nil {
+		return err
+	}
+	room, err := _touchUser(ctx, playerName, deviceUUID)
+	if err != nil {
+		return err
+	}
+	if room != nil && room.ID.String() != roomID {
+		return errors.New("您已加入了其他房间，请退出后再加入新的房间。")
+	}
+	var targetRoom db.Room
+	if err := db.DB.WithContext(ctx).Preload("RoomUsers").Where("id = ?", roomID).Find(&targetRoom).Error; err != nil {
+		return err
+	}
+	for _, user := range targetRoom.RoomUsers {
+		if user.PlayerName == playerName {
+			if user.DeviceUUID != deviceUUID {
+				return errors.New("您已在其他设备加入了这个房间。")
+			}
+			// 用户已加入该房间，跳过资料创建
+			return nil
+		}
+	}
+	userData, err := starcitizen_api.GetUserData(playerName)
+	if err != nil {
+		return err
+	}
+	newUser := &db.RoomUser{
+		RoomID:     roomUUID,
+		PlayerName: playerName,
+		DeviceUUID: deviceUUID,
+		Avatar:     userData.Data.Profile.Image,
+	}
+	if err := db.DB.Create(newUser).Error; err != nil {
+		return err
+	}
+	return nil
+}
+
+func _touchUser(ctx context.Context, playerName string, deviceUUID string) (*db.Room, error) {
+	// 查找用户已创建的房间
+	var userCreatedRooms []db.Room
+	if err := db.DB.WithContext(ctx).Order("updated_at desc").Preload("RoomUsers").Where("owner = ?", playerName).Find(&userCreatedRooms).Error; err != nil {
+		return nil, err
+	}
+	if len(userCreatedRooms) != 0 {
+		for _, room := range userCreatedRooms {
+			if room.DeviceUUID != deviceUUID {
+				return nil, errors.New("您的账号在其他设备存在未销毁的房间，请退出房间或等待自动销毁后重试")
+			}
+		}
+		return &(userCreatedRooms[0]), nil
+	}
+
+	// 查找用户已加入的房间
+	var user []db.RoomUser
+	if err := db.DB.WithContext(ctx).Order("updated_at desc").Preload("Room").Find(&user, "player_name = ?", playerName).Error; err != nil {
+		return nil, err
+	}
+	if len(user) == 0 {
+		return nil, nil
+	}
+	for _, roomUser := range user {
+		if roomUser.DeviceUUID != deviceUUID {
+			return nil, errors.New("您的账号在其他设备存在未退出的房间，无法在新的设备 创建/加入 房间")
+		}
+	}
+	return user[0].Room, nil
+}
+
+func _roomDataToRoomResultData(room *db.Room, fullInfo bool) *protos.RoomData {
 	r := &protos.RoomData{
 		Id:             room.ID.String(),
 		RoomTypeID:     room.RoomTypeID,
 		RoomSubTypeIds: room.RoomSubTypeIds,
 		MaxPlayer:      room.MaxPlayer,
 		Status:         room.Status,
-		CurPlayer:      room.CurPlayer,
+		CurPlayer:      int32(len(room.RoomUsers)),
 		Announcement:   "-",
 		Avatar:         room.Avatar,
+		CreateTime:     room.CreatedAt.UnixMilli(),
+		UpdateTime:     room.UpdatedAt.UnixMilli(),
 	}
 	if fullInfo {
 		r.Owner = room.Owner

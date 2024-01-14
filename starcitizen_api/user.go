@@ -1,6 +1,7 @@
 package starcitizen_api
 
 import (
+	"errors"
 	"github.com/imroc/req/v3"
 	"party_room_server/build_conf"
 )
@@ -49,5 +50,12 @@ type UserData struct {
 func GetUserData(userName string) (*UserData, error) {
 	resp := req.MustGet("https://api.starcitizen-api.com/" + build_conf.StarCitizenWikiUserApiKey + "/v1/auto/user/" + userName)
 	var userData UserData
-	return &userData, resp.UnmarshalJson(&userData)
+	err := resp.UnmarshalJson(&userData)
+	if err != nil {
+		return nil, err
+	}
+	if userData.Success != 1 {
+		return nil, errors.New(userData.Message)
+	}
+	return &userData, nil
 }

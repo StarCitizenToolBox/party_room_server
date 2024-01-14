@@ -6,6 +6,7 @@ service IndexService {
   rpc GetRoomTypes (Empty) returns (RoomTypesData){}
   rpc CreateRoom (RoomData) returns (RoomData){}
   rpc GetRoomList(RoomListPageReqData) returns (RoomListData) {}
+  rpc TouchUser(PreUser) returns (RoomData) {}
 }
 
 message Empty {}
@@ -76,6 +77,7 @@ message RoomData {
   string deviceUUID = 9;
   string announcement = 10;
   string avatar = 11;
+  int64 updateTime = 12;
 }
 
 message RoomListPageReqData {
@@ -89,4 +91,9 @@ message RoomListPageReqData {
 message RoomListData {
   BasePageRespData pageData = 1;
   repeated RoomData rooms = 2;
+}
+
+message PreUser {
+  string userName = 1;
+  string deviceUUID = 2;
 }

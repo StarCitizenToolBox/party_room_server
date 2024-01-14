@@ -1,0 +1,22 @@
+syntax = "proto3";
+option go_package = "../protos";
+
+message ChatMessage {
+  string senderID = 1; // 发送者ID
+  string receiverID = 2; // 接收者ID
+  ReceiverType receiverType = 3; //接收者类型
+  MessageType messageType = 4; // 消息类型
+  string data = 5; //消息数据
+}
+
+enum ReceiverType {
+  RoomMsg = 0; // 群组消息
+  PrivateMsg = 1; // 私聊消息
+}
+
+enum MessageType {
+  System = 0; // 系统消息
+  Text = 1; // 纯文字消息
+  Image = 2; // 图片消息
+  Markdown = 3; // markdown富文本消息
+}

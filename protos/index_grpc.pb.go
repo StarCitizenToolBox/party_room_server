@@ -23,6 +23,7 @@ const (
 	IndexService_GetRoomTypes_FullMethodName = "/IndexService/GetRoomTypes"
 	IndexService_CreateRoom_FullMethodName   = "/IndexService/CreateRoom"
 	IndexService_GetRoomList_FullMethodName  = "/IndexService/GetRoomList"
+	IndexService_TouchUser_FullMethodName    = "/IndexService/TouchUser"
 )
 
 // IndexServiceClient is the client API for IndexService service.
@@ -33,6 +34,7 @@ type IndexServiceClient interface {
 	GetRoomTypes(ctx context.Context, in *Empty, opts ...grpc.CallOption) (*RoomTypesData, error)
 	CreateRoom(ctx context.Context, in *RoomData, opts ...grpc.CallOption) (*RoomData, error)
 	GetRoomList(ctx context.Context, in *RoomListPageReqData, opts ...grpc.CallOption) (*RoomListData, error)
+	TouchUser(ctx context.Context, in *PreUser, opts ...grpc.CallOption) (*RoomData, error)
 }
 
 type indexServiceClient struct {
@@ -79,6 +81,15 @@ func (c *indexServiceClient) GetRoomList(ctx context.Context, in *RoomListPageRe
 	return out, nil
 }
 
+func (c *indexServiceClient) TouchUser(ctx context.Context, in *PreUser, opts ...grpc.CallOption) (*RoomData, error) {
+	out := new(RoomData)
+	err := c.cc.Invoke(ctx, IndexService_TouchUser_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IndexServiceServer is the server API for IndexService service.
 // All implementations must embed UnimplementedIndexServiceServer
 // for forward compatibility
@@ -87,6 +98,7 @@ type IndexServiceServer interface {
 	GetRoomTypes(context.Context, *Empty) (*RoomTypesData, error)
 	CreateRoom(context.Context, *RoomData) (*RoomData, error)
 	GetRoomList(context.Context, *RoomListPageReqData) (*RoomListData, error)
+	TouchUser(context.Context, *PreUser) (*RoomData, error)
 	mustEmbedUnimplementedIndexServiceServer()
 }
 
@@ -105,6 +117,9 @@ func (UnimplementedIndexServiceServer) CreateRoom(context.Context, *RoomData) (*
 }
 func (UnimplementedIndexServiceServer) GetRoomList(context.Context, *RoomListPageReqData) (*RoomListData, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetRoomList not implemented")
+}
+func (UnimplementedIndexServiceServer) TouchUser(context.Context, *PreUser) (*RoomData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TouchUser not implemented")
 }
 func (UnimplementedIndexServiceServer) mustEmbedUnimplementedIndexServiceServer() {}
 
@@ -191,6 +206,24 @@ func _IndexService_GetRoomList_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _IndexService_TouchUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreUser)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IndexServiceServer).TouchUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IndexService_TouchUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IndexServiceServer).TouchUser(ctx, req.(*PreUser))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // IndexService_ServiceDesc is the grpc.ServiceDesc for IndexService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -213,6 +246,10 @@ var IndexService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetRoomList",
 			Handler:    _IndexService_GetRoomList_Handler,
+		},
+		{
+			MethodName: "TouchUser",
+			Handler:    _IndexService_TouchUser_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

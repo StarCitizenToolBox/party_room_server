@@ -40,7 +40,7 @@ func Connect() error {
 }
 
 func _initTables() error {
-	return DB.AutoMigrate(&RoomsTable{})
+	return DB.AutoMigrate(&Room{}, &RoomUser{})
 }
 
 type BaseTable struct {

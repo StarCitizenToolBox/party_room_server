@@ -1,2 +1,3 @@
 /.idea/
 *.iml
+/build_conf/no_public.go
