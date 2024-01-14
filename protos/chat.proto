@@ -1,5 +1,11 @@
 syntax = "proto3";
 option go_package = "../protos";
+import "index.proto";
+
+service ChatService {
+  rpc ListenMessage(PreUser) returns (stream ChatMessage){}
+  rpc SendMessage(ChatMessage) returns (BaseRespData){}
+}
 
 message ChatMessage {
   string senderID = 1; // 发送者ID
