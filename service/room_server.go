@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"party_room_server/db"
 	"party_room_server/protos"
@@ -26,7 +27,9 @@ type _roomServer struct {
 	Rooms map[uuid.UUID]_roomUsers
 }
 
-var RoomServer = _roomServer{}
+var RoomServer = _roomServer{
+	Rooms: map[uuid.UUID]_roomUsers{},
+}
 
 func (r *_roomServer) CreateRoom(roomID uuid.UUID) _roomUsers {
 	r.mu.Lock()
@@ -103,11 +106,16 @@ func (r *_roomServer) sendMessageToRoomUser(roomID uuid.UUID, userName string, m
 }
 
 func _onUserJoinRoom(user *db.RoomUser, stream protos.IndexService_JoinRoomServer, streamCancelFunc context.CancelFunc) error {
+	fmt.Println("RoomServer._onUserJoinRoom  user === ", user)
 	deviceUUID, err := uuid.Parse(user.DeviceUUID)
 	if err != nil {
 		return err
 	}
 	err = RoomServer.AddUser(user.RoomID, user.PlayerName, deviceUUID, stream, streamCancelFunc)
+	if err != nil {
+		return err
+	}
+	statusUser, err := _setUserStatus(user.RoomID.String(), user.PlayerName, protos.RoomUserStatus_RoomUserStatusJoin)
 	if err != nil {
 		return err
 	}
@@ -118,7 +126,7 @@ func _onUserJoinRoom(user *db.RoomUser, stream protos.IndexService_JoinRoomServe
 	}
 	if err := RoomServer.sendMessageToRoomUser(user.RoomID, user.PlayerName, &protos.RoomUpdateMessage{
 		RoomUpdateType: protos.RoomUpdateType_RoomUpdateData,
-		RoomData:       _roomDataToRoomResultData(user.Room, false),
+		RoomData:       _roomDataToRoomResultData(user.Room, true),
 		UsersData:      roomUsersList,
 	}); err != nil {
 		return err
@@ -127,17 +135,33 @@ func _onUserJoinRoom(user *db.RoomUser, stream protos.IndexService_JoinRoomServe
 	RoomServer.SendBroadcastMessage(user.RoomID, &protos.RoomUpdateMessage{
 		RoomUpdateType: protos.RoomUpdateType_RoomUpdateData,
 		UsersData: []*protos.RoomUserData{
-			_roomUserToGrpcRoomUserData(user),
+			_roomUserToGrpcRoomUserData(statusUser),
 		},
 	})
+
+	// 检测是否为房主上线
+	if user.Room.Status == protos.RoomStatus_WillOffline && user.PlayerName == user.Room.Owner && user.DeviceUUID == user.Room.DeviceUUID {
+		room, err := _setRoomStatus(user.RoomID.String(), protos.RoomStatus_Open)
+		if err != nil {
+			return err
+		}
+		// 向房间内所有用户发送房间更新提示
+		RoomServer.SendBroadcastMessage(room.ID, &protos.RoomUpdateMessage{
+			RoomUpdateType: protos.RoomUpdateType_RoomUpdateData,
+			RoomData:       _roomDataToRoomResultData(room, true),
+		})
+	}
 	return nil
 }
 
 func _onUserOfflineRoom(roomID string, playerName string, _ string) {
+	fmt.Println("RoomServer._onUserOfflineRoom  playerName === ", playerName)
 	user, err := _setUserStatus(roomID, playerName, protos.RoomUserStatus_RoomUserStatusLostOffline)
 	if err != nil {
+		fmt.Println("_setUserStatus error ", err)
 		return
 	}
+	fmt.Println("RoomServer._onUserOfflineRoom then  user === ", user)
 	// 向房间内所有用户发送用户状态更新
 	RoomServer.SendBroadcastMessage(user.RoomID, &protos.RoomUpdateMessage{
 		RoomUpdateType: protos.RoomUpdateType_RoomUpdateData,
@@ -147,4 +171,18 @@ func _onUserOfflineRoom(roomID string, playerName string, _ string) {
 	})
 	// 删除用户
 	_ = RoomServer.DelUser(user.RoomID, playerName)
+
+	// 检测是否为房主离线
+	if user.Room.Owner == user.PlayerName && user.Room.DeviceUUID == user.DeviceUUID {
+		// 更新房间状态
+		room, err := _setRoomStatus(user.RoomID.String(), protos.RoomStatus_WillOffline)
+		if err != nil {
+			return
+		}
+		// 向房间内所有用户发送房间更新提示
+		RoomServer.SendBroadcastMessage(room.ID, &protos.RoomUpdateMessage{
+			RoomUpdateType: protos.RoomUpdateType_RoomUpdateData,
+			RoomData:       _roomDataToRoomResultData(room, true),
+		})
+	}
 }

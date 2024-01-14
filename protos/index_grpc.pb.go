@@ -25,6 +25,7 @@ const (
 	IndexService_GetRoomList_FullMethodName  = "/IndexService/GetRoomList"
 	IndexService_TouchUser_FullMethodName    = "/IndexService/TouchUser"
 	IndexService_JoinRoom_FullMethodName     = "/IndexService/JoinRoom"
+	IndexService_LeaveRoom_FullMethodName    = "/IndexService/LeaveRoom"
 )
 
 // IndexServiceClient is the client API for IndexService service.
@@ -37,6 +38,7 @@ type IndexServiceClient interface {
 	GetRoomList(ctx context.Context, in *RoomListPageReqData, opts ...grpc.CallOption) (*RoomListData, error)
 	TouchUser(ctx context.Context, in *PreUser, opts ...grpc.CallOption) (*RoomData, error)
 	JoinRoom(ctx context.Context, in *PreUser, opts ...grpc.CallOption) (IndexService_JoinRoomClient, error)
+	LeaveRoom(ctx context.Context, in *PreUser, opts ...grpc.CallOption) (*BaseRespData, error)
 }
 
 type indexServiceClient struct {
@@ -124,6 +126,15 @@ func (x *indexServiceJoinRoomClient) Recv() (*RoomUpdateMessage, error) {
 	return m, nil
 }
 
+func (c *indexServiceClient) LeaveRoom(ctx context.Context, in *PreUser, opts ...grpc.CallOption) (*BaseRespData, error) {
+	out := new(BaseRespData)
+	err := c.cc.Invoke(ctx, IndexService_LeaveRoom_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // IndexServiceServer is the server API for IndexService service.
 // All implementations must embed UnimplementedIndexServiceServer
 // for forward compatibility
@@ -134,6 +145,7 @@ type IndexServiceServer interface {
 	GetRoomList(context.Context, *RoomListPageReqData) (*RoomListData, error)
 	TouchUser(context.Context, *PreUser) (*RoomData, error)
 	JoinRoom(*PreUser, IndexService_JoinRoomServer) error
+	LeaveRoom(context.Context, *PreUser) (*BaseRespData, error)
 	mustEmbedUnimplementedIndexServiceServer()
 }
 
@@ -158,6 +170,9 @@ func (UnimplementedIndexServiceServer) TouchUser(context.Context, *PreUser) (*Ro
 }
 func (UnimplementedIndexServiceServer) JoinRoom(*PreUser, IndexService_JoinRoomServer) error {
 	return status.Errorf(codes.Unimplemented, "method JoinRoom not implemented")
+}
+func (UnimplementedIndexServiceServer) LeaveRoom(context.Context, *PreUser) (*BaseRespData, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LeaveRoom not implemented")
 }
 func (UnimplementedIndexServiceServer) mustEmbedUnimplementedIndexServiceServer() {}
 
@@ -283,6 +298,24 @@ func (x *indexServiceJoinRoomServer) Send(m *RoomUpdateMessage) error {
 	return x.ServerStream.SendMsg(m)
 }
 
+func _IndexService_LeaveRoom_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PreUser)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(IndexServiceServer).LeaveRoom(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: IndexService_LeaveRoom_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(IndexServiceServer).LeaveRoom(ctx, req.(*PreUser))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // IndexService_ServiceDesc is the grpc.ServiceDesc for IndexService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -309,6 +342,10 @@ var IndexService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "TouchUser",
 			Handler:    _IndexService_TouchUser_Handler,
+		},
+		{
+			MethodName: "LeaveRoom",
+			Handler:    _IndexService_LeaveRoom_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

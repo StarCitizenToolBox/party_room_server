@@ -8,6 +8,7 @@ service IndexService {
   rpc GetRoomList(RoomListPageReqData) returns (RoomListData) {}
   rpc TouchUser(PreUser) returns (RoomData) {}
   rpc JoinRoom(PreUser) returns (stream RoomUpdateMessage){}
+  rpc LeaveRoom(PreUser) returns (BaseRespData){}
 }
 
 message Empty {}
@@ -104,6 +105,7 @@ enum RoomUserStatus {
   RoomUserStatusJoin = 0; // 用户已加入房间
   RoomUserStatusLostOffline = 1; // 用户即将离线
   RoomUserStatusLeave = 2; // 用户已离开
+  RoomUserStatusWaitingConnect = 3; // 用户已占座，等待连接
 }
 
 enum RoomUpdateType {

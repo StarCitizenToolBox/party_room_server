@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"party_room_server/build_conf"
 	"party_room_server/db"
 	"party_room_server/protos"
@@ -56,7 +58,7 @@ func (IndexServiceImpl) CreateRoom(ctx context.Context, req *protos.RoomData) (*
 		Owner:          req.Owner,
 		MaxPlayer:      req.MaxPlayer,
 		DeviceUUID:     req.DeviceUUID,
-		Status:         protos.RoomStatus_Open,
+		Status:         protos.RoomStatus_WillOffline,
 		Announcement:   req.Announcement,
 		Avatar:         userData.Data.Profile.Image,
 	}
@@ -107,7 +109,9 @@ func (IndexServiceImpl) TouchUser(ctx context.Context, req *protos.PreUser) (*pr
 		return nil, err
 	}
 	if room == nil {
-		return nil, nil
+		return &protos.RoomData{
+			Id: "",
+		}, nil
 	}
 	return _roomDataToRoomResultData(room, false), err
 }
@@ -130,6 +134,11 @@ func (IndexServiceImpl) JoinRoom(preUser *protos.PreUser, stream protos.IndexSer
 	}
 }
 
+func (IndexServiceImpl) LeaveRoom(ctx context.Context, preUser *protos.PreUser) (*protos.BaseRespData, error) {
+	//TODO 用户离开房间
+	return nil, status.Errorf(codes.Unimplemented, "method LeaveRoom not implemented")
+}
+
 func _joinRoom(ctx context.Context, roomID string, playerName string, deviceUUID string) (*db.RoomUser, error) {
 	roomUUID, err := uuid.Parse(roomID)
 	if err != nil {
@@ -144,6 +153,9 @@ func _joinRoom(ctx context.Context, roomID string, playerName string, deviceUUID
 	}
 	var targetRoom db.Room
 	if err := db.DB.WithContext(ctx).Preload("RoomUsers").Where("id = ?", roomID).Find(&targetRoom).Error; err != nil {
+		return nil, err
+	}
+	if err := _checkRoomStatus(&targetRoom, playerName, deviceUUID); err != nil {
 		return nil, err
 	}
 	for _, user := range targetRoom.RoomUsers {
@@ -165,13 +177,30 @@ func _joinRoom(ctx context.Context, roomID string, playerName string, deviceUUID
 		PlayerName: playerName,
 		DeviceUUID: deviceUUID,
 		Avatar:     userData.Data.Profile.Image,
-		Status:     protos.RoomUserStatus_RoomUserStatusJoin,
+		Status:     protos.RoomUserStatus_RoomUserStatusWaitingConnect,
 	}
 	if err := db.DB.Create(newUser).Error; err != nil {
 		return nil, err
 	}
 	newUser.Room = &targetRoom
 	return newUser, nil
+}
+
+func _checkRoomStatus(targetRoom *db.Room, playerName string, deviceUUID string) error {
+	if targetRoom.Status == protos.RoomStatus_Open {
+		return nil
+	}
+	if targetRoom.Status == protos.RoomStatus_Full || targetRoom.Status == protos.RoomStatus_Closed {
+		//TODO 检查用户是否已在房间里，如果在，则允许重新连接
+	}
+	if targetRoom.Status == protos.RoomStatus_WillOffline {
+		if targetRoom.Owner == playerName && targetRoom.DeviceUUID == deviceUUID {
+			/// 这个状态仅允许房主连接
+			return nil
+		}
+		return errors.New("房主已离线，请稍后重试")
+	}
+	return nil
 }
 
 func _touchUser(ctx context.Context, playerName string, deviceUUID string) (*db.Room, error) {
@@ -227,11 +256,20 @@ func _getRoomPlayerListForGrpc(roomID string) ([]*protos.RoomUserData, error) {
 
 func _setUserStatus(roomID string, playerName string, status protos.RoomUserStatus) (*db.RoomUser, error) {
 	var roomUser db.RoomUser
-	if err := db.DB.Find(&roomUser, "roomID = ? AND player_name = ?", roomID, playerName).Error; err != nil {
+	if err := db.DB.Preload("Room").Find(&roomUser, "room_id = ? AND player_name = ?", roomID, playerName).Error; err != nil {
 		return nil, err
 	}
 	roomUser.Status = status
-	return &roomUser, db.DB.Updates(&roomUser).Error
+	return &roomUser, db.DB.Select("status").Updates(&roomUser).Error
+}
+
+func _setRoomStatus(roomID string, status protos.RoomStatus) (*db.Room, error) {
+	var room db.Room
+	if err := db.DB.Find(&room, "id = ?", roomID).Error; err != nil {
+		return nil, err
+	}
+	room.Status = status
+	return &room, db.DB.Select("status").Updates(&room).Error
 }
 
 func _roomDataToRoomResultData(room *db.Room, fullInfo bool) *protos.RoomData {
